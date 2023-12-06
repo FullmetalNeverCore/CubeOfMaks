@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Full-Screen WebGL Canvas</title>
+    <style>
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+<script src="js/graphics.js"></script>
+<canvas id="webgl-canvas"></canvas>
+<script>
+    const canvas = document.getElementById('webgl-canvas');
+    const gl = canvas.getContext('webgl');
+
+    window.addEventListener('resize', onResize);
+    onResize();
+
+    if (!gl) {
+        alert('Unable to initialize WebGL. Your browser or machine may not support it.');
+    }
+
+    //vert shader
+    const vsSource = `
+        attribute vec4 aVertexPosition;
+        attribute vec2 aTextureCoord;
+
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+
+        varying highp vec2 vTextureCoord;
+
+        void main() {
+          gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+          vTextureCoord = aTextureCoord;
+        }
+    `;
+
+
+    // frag shader
+    const fsSource = `
+        varying highp vec2 vTextureCoord;
+        uniform sampler2D uSampler;
+
+        void main() {
+            gl_FragColor = texture2D(uSampler, vTextureCoord);
+        }
+    `;
+
+
+    const vertexShader = loadShader(gl,gl.VERTEX_SHADER,vsSource);
+
+    const fragShader = loadShader(gl,gl.FRAGMENT_SHADER,fsSource);
+
+
+    const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+
+
+
+
+    const buffers = VBO(gl);
+
+
+
+
+    const programInfo = {
+        program: shaderProgram,
+        attribLocations: {
+            vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+            textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+        },
+        uniformLocations: {
+            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+            projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+            uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+        },
+    };
+
+
+    // Draw the scene
+    let squareRotation = 0.0;
+    let lastTime = 0;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+    gl.vertexAttribPointer(
+        programInfo.attribLocations.textureCoord,
+        2, // because each texture coordinate is composed of 2 values
+        gl.FLOAT,
+        false,
+        0,
+        0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+
+    const cubeTexture = loadTexture(gl, 'https://i.imgur.com/CPgPP2m.jpg');
+
+    function render(now) {
+            now *= 0.001;  // Convert time to seconds
+            const deltaTime = now - lastTime;
+            lastTime = now;
+
+
+
+            drawScene(gl, programInfo, buffers, cubeTexture, deltaTime);
+
+            requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+
+</script>
+</body>
